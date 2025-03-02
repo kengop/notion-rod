@@ -5,6 +5,9 @@ import urllib3
 from typing import NamedTuple
 
 
+api_url = "https://api.notion.com/v1/pages"
+
+
 class EnvSettings(NamedTuple):
     notion_api_key: str
     database_id: str
@@ -43,16 +46,17 @@ def post_request(req: RequestNotionPage):
     return res
 
 
+def create_request(page_title: str, description: str):
+    http = urllib3.PoolManager()
+    params = {
+        "parent": {"database_id": env_settings.database_id},
+        "icon": {"emoji": "😀"},
+        "properties": {
+            "名前": {"title": [{"text": {"content": page_title}}]},
+            "Description": {"rich_text": [{"text": {"content": description}}]},
+        },
+    }
+    return RequestNotionPage(http, params)
+
+
 env_settings = initEnv()
-api_url = "https://api.notion.com/v1/pages"
-http = urllib3.PoolManager()
-params = {
-    "parent": {"database_id": env_settings.database_id},
-    "icon": {"emoji": "😀"},
-    "properties": {"名前": {"title": [{"text": {"content": "Hello Integration！"}}]}},
-}
-
-req = RequestNotionPage(http, params)
-res = post_request(req)
-
-print(json.loads(res.data))
