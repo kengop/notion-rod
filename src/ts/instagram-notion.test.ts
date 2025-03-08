@@ -45,10 +45,63 @@ const mockInstagramResponse = {
 };
 
 // Notion APIのレスポンスをモック
-const mockNotionResponse = {
+const mockNotionCreateResponse = {
   data: {
     id: "notion-page-id",
     url: "https://notion.so/page-id",
+    properties: {
+      名前: { title: [{ text: { content: "テストユーザーに返信する" } }] },
+      Description: {
+        rich_text: [
+          { text: { content: "こんにちは！商品について質問があります。" } },
+        ],
+      },
+      状態: { select: { name: "未着手" } },
+    },
+  },
+};
+
+const mockNotionUpdateResponse = {
+  data: {
+    id: "existing-page-id",
+    url: "https://notion.so/existing-page-id",
+    properties: {
+      名前: { title: [{ text: { content: "テストユーザーに返信する" } }] },
+      Description: {
+        rich_text: [{ text: { content: "更新されたメッセージ内容" } }],
+      },
+      状態: { select: { name: "未着手" } },
+    },
+  },
+};
+
+// 検索結果のモック - タスクなし
+const mockEmptySearchResponse = {
+  data: {
+    results: [],
+    has_more: false,
+    next_cursor: null,
+  },
+};
+
+// 検索結果のモック - 未着手のタスクあり
+const mockExistingTaskSearchResponse = {
+  data: {
+    results: [
+      {
+        id: "existing-page-id",
+        url: "https://notion.so/existing-page-id",
+        properties: {
+          名前: { title: [{ text: { content: "テストユーザーに返信する" } }] },
+          Description: {
+            rich_text: [{ text: { content: "以前のメッセージ内容" } }],
+          },
+          状態: { select: { name: "未着手" } },
+        },
+      },
+    ],
+    has_more: false,
+    next_cursor: null,
   },
 };
 
@@ -57,8 +110,15 @@ function setupMocks() {
   // axiosのgetメソッドをモック
   mockedAxios.get.mockResolvedValue(mockInstagramResponse);
 
-  // axiosのpostメソッドをモック
-  mockedAxios.post.mockResolvedValue(mockNotionResponse);
+  // axiosのpostメソッドをモック - デフォルトでは空の検索結果と新規作成レスポンスを返す
+  // mockedAxios.post.mockReset(); // この行をコメントアウト
+  // 検索APIのモック
+  // mockedAxios.post.mockResolvedValueOnce(mockEmptySearchResponse); // この行をコメントアウト
+  // 作成APIのモック
+  // mockedAxios.post.mockResolvedValueOnce(mockNotionCreateResponse); // この行をコメントアウト
+
+  // axiosのpatchメソッドをモック
+  mockedAxios.patch.mockResolvedValue(mockNotionUpdateResponse);
 
   // 環境変数のモック
   process.env.NOTION_API_KEY = "test-notion-api-key";
@@ -78,7 +138,13 @@ describe("Instagram Webhook Processing", () => {
     jest.resetAllMocks();
   });
 
-  test("正常系: メッセージを受信してNotionページを作成", async () => {
+  test("正常系: メッセージを受信して新しいNotionページを作成", async () => {
+    // 検索結果が空のモックを設定
+    mockedAxios.post.mockClear();
+    mockedAxios.post.mockResolvedValueOnce(mockEmptySearchResponse); // 検索API - 未着手タスク
+    mockedAxios.post.mockResolvedValueOnce(mockEmptySearchResponse); // 検索API - 進行中タスク
+    mockedAxios.post.mockResolvedValueOnce(mockNotionCreateResponse); // 作成API
+
     // 期待される結果
     const expectedResult = "Success";
 
@@ -99,13 +165,69 @@ describe("Instagram Webhook Processing", () => {
       })
     );
 
-    // Notion APIが正しく呼び出されたか検証
+    // Notion検索APIが呼び出されたか検証（2回呼ばれる）
+    expect(mockedAxios.post).toHaveBeenCalledWith(
+      "https://api.notion.com/v1/search",
+      expect.any(Object),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Bearer test-notion-api-key",
+          "Notion-Version": "2022-06-28",
+        }),
+      })
+    );
+
+    // Notion作成APIが正しく呼び出されたか検証
     expect(mockedAxios.post).toHaveBeenCalledWith(
       "https://api.notion.com/v1/pages",
       expect.objectContaining({
         parent: { database_id: "test-database-id" },
         properties: expect.objectContaining({
           名前: { title: [{ text: { content: "テストユーザーに返信する" } }] },
+          Description: {
+            rich_text: [
+              { text: { content: "こんにちは！商品について質問があります。" } },
+            ],
+          },
+          状態: { select: { name: "未着手" } }, // 状態プロパティが追加されていることを確認
+        }),
+      }),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Bearer test-notion-api-key",
+          "Notion-Version": "2022-06-28",
+        }),
+      })
+    );
+  });
+
+  test("正常系: 既存のタスクを更新", async () => {
+    // 既存のタスクがある場合の検索結果をモック
+    mockedAxios.post.mockClear();
+    mockedAxios.post.mockResolvedValueOnce(mockExistingTaskSearchResponse); // 検索API - 未着手タスク
+    mockedAxios.post.mockResolvedValueOnce(mockEmptySearchResponse); // 検索API - 進行中タスク（空の結果）
+
+    // 期待される結果
+    const expectedResult = "Success";
+
+    // テスト実行
+    const result = await processInstagramWebhook(mockWebhookPayload);
+
+    // アサーション
+    expect(result).toBe(expectedResult);
+
+    // Notion検索APIが呼び出されたか検証
+    expect(mockedAxios.post).toHaveBeenCalledWith(
+      "https://api.notion.com/v1/search",
+      expect.any(Object),
+      expect.any(Object)
+    );
+
+    // Notion更新APIが正しく呼び出されたか検証
+    expect(mockedAxios.patch).toHaveBeenCalledWith(
+      "https://api.notion.com/v1/pages/existing-page-id",
+      expect.objectContaining({
+        properties: expect.objectContaining({
           Description: {
             rich_text: [
               { text: { content: "こんにちは！商品について質問があります。" } },
@@ -119,6 +241,13 @@ describe("Instagram Webhook Processing", () => {
           "Notion-Version": "2022-06-28",
         }),
       })
+    );
+
+    // 新規作成APIが呼び出されていないことを確認
+    expect(mockedAxios.post).not.toHaveBeenCalledWith(
+      "https://api.notion.com/v1/pages",
+      expect.any(Object),
+      expect.any(Object)
     );
   });
 
@@ -140,12 +269,23 @@ describe("Instagram Webhook Processing", () => {
 
     // APIが呼び出されていないことを検証
     expect(mockedAxios.get).not.toHaveBeenCalled();
-    expect(mockedAxios.post).not.toHaveBeenCalled();
+    expect(mockedAxios.post).not.toHaveBeenCalledWith(
+      "https://api.notion.com/v1/pages",
+      expect.any(Object),
+      expect.any(Object)
+    );
+    expect(mockedAxios.patch).not.toHaveBeenCalled();
   });
 
   test("異常系: Instagram APIがエラーを返す場合", async () => {
     // Instagram APIのエラーをモック
     mockedAxios.get.mockRejectedValueOnce(new Error("API Error"));
+
+    // 検索結果が空のモックを設定
+    mockedAxios.post.mockClear();
+    mockedAxios.post.mockResolvedValueOnce(mockEmptySearchResponse); // 検索API - 未着手タスク
+    mockedAxios.post.mockResolvedValueOnce(mockEmptySearchResponse); // 検索API - 進行中タスク
+    mockedAxios.post.mockResolvedValueOnce(mockNotionCreateResponse); // 作成API
 
     // テスト実行
     const result = await processInstagramWebhook(mockWebhookPayload);
@@ -159,8 +299,31 @@ describe("Instagram Webhook Processing", () => {
       expect.objectContaining({
         properties: expect.objectContaining({
           名前: { title: [{ text: { content: "987654321に返信する" } }] },
+          状態: { select: { name: "未着手" } },
         }),
       }),
+      expect.any(Object)
+    );
+  });
+
+  test("異常系: Notion検索APIがエラーを返す場合", async () => {
+    // Notion検索APIのエラーをモック
+    mockedAxios.post.mockClear();
+    mockedAxios.post.mockRejectedValueOnce(
+      new Error("Notion Search API Error")
+    ); // 検索APIエラー - 未着手タスク
+    mockedAxios.post.mockResolvedValueOnce(mockNotionCreateResponse); // 作成API
+
+    // テスト実行
+    const result = await processInstagramWebhook(mockWebhookPayload);
+
+    // アサーション - エラーが発生しても新規作成が行われる
+    expect(result).toBe("Success");
+
+    // Notion作成APIが呼び出されたことを確認
+    expect(mockedAxios.post).toHaveBeenCalledWith(
+      "https://api.notion.com/v1/pages",
+      expect.any(Object),
       expect.any(Object)
     );
   });
