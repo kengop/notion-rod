@@ -62,10 +62,10 @@ interface NotionSearchRequest {
     property: string;
     [key: string]: any;
   };
-  sorts?: Array<{
-    property?: string;
+  sort?: {
+    timestamp?: string;
     direction: "ascending" | "descending";
-  }>;
+  };
 }
 
 interface NotionSearchResponse {
@@ -130,12 +130,10 @@ async function searchNotionPages(
         property: "object",
         value: "page",
       },
-      sorts: [
-        {
-          property: "created_time",
-          direction: "descending",
-        },
-      ],
+      sort: {
+        timestamp: "last_edited_time",
+        direction: "descending",
+      },
     };
 
     // 検索APIを呼び出す
@@ -183,10 +181,10 @@ async function searchNotionPages(
       // 状態のチェック（指定されている場合）
       if (status !== undefined) {
         const statusProperty = page.properties["状態"];
-        if (!statusProperty || !statusProperty.select) {
+        if (!statusProperty || !statusProperty.status) {
           return false;
         }
-        const pageStatus = statusProperty.select.name || "";
+        const pageStatus = statusProperty.status.name || "";
         return titleMatch && pageStatus === status;
       }
 
@@ -259,7 +257,7 @@ async function createNotionPage(
       properties: {
         名前: { title: [{ text: { content: title } }] },
         Description: { rich_text: [{ text: { content: description } }] },
-        状態: { select: { name: TaskStatus.NotStarted } }, // 初期状態は「未着手」
+        状態: { status: { name: TaskStatus.NotStarted } }, // 初期状態は「未着手」
       },
     };
 
@@ -285,7 +283,7 @@ async function createNotionPage(
       properties: {
         名前: { title: [{ text: { content: title } }] },
         Description: { rich_text: [{ text: { content: description } }] },
-        状態: { select: { name: TaskStatus.NotStarted } },
+        状態: { status: { name: TaskStatus.NotStarted } },
       },
       error: error instanceof Error ? error.message : "Unknown error",
     };

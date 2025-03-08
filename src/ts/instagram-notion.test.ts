@@ -56,7 +56,7 @@ const mockNotionCreateResponse = {
           { text: { content: "こんにちは！商品について質問があります。" } },
         ],
       },
-      状態: { select: { name: "未着手" } },
+      状態: { status: { name: "未着手" } },
     },
   },
 };
@@ -70,7 +70,7 @@ const mockNotionUpdateResponse = {
       Description: {
         rich_text: [{ text: { content: "更新されたメッセージ内容" } }],
       },
-      状態: { select: { name: "未着手" } },
+      状態: { status: { name: "未着手" } },
     },
   },
 };
@@ -96,7 +96,7 @@ const mockExistingTaskSearchResponse = {
           Description: {
             rich_text: [{ text: { content: "以前のメッセージ内容" } }],
           },
-          状態: { select: { name: "未着手" } },
+          状態: { status: { name: "未着手" } },
         },
       },
     ],
@@ -189,7 +189,7 @@ describe("Instagram Webhook Processing", () => {
               { text: { content: "こんにちは！商品について質問があります。" } },
             ],
           },
-          状態: { select: { name: "未着手" } }, // 状態プロパティが追加されていることを確認
+          状態: { status: { name: "未着手" } }, // 状態プロパティが追加されていることを確認
         }),
       }),
       expect.objectContaining({
@@ -299,7 +299,7 @@ describe("Instagram Webhook Processing", () => {
       expect.objectContaining({
         properties: expect.objectContaining({
           名前: { title: [{ text: { content: "987654321に返信する" } }] },
-          状態: { select: { name: "未着手" } },
+          状態: { status: { name: "未着手" } },
         }),
       }),
       expect.any(Object)
