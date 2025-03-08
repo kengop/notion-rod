@@ -8,6 +8,7 @@ config();
 interface InstagramMessage {
   mid: string;
   text: string;
+  is_echo?: boolean;
 }
 
 interface InstagramSender {
@@ -368,6 +369,9 @@ export async function processInstagramWebhook(
       // messagingフィールドの処理
       if (entry.messaging) {
         for (const message of entry.messaging) {
+          if (message.message.is_echo) {
+            return "Nothing to do.";
+          }
           const senderId = message.sender.id;
           const messageText = message.message.text;
 
