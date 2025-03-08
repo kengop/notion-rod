@@ -75,16 +75,17 @@ npm test -- --watch
 
 ```
 notion-rod/
-├── dist/                  # コンパイルされたJavaScriptファイル
+├── dist/                  # コンパイルされたJavaScriptファイル（ビルド後に生成）
 ├── src/
-│   ├── ts/                # TypeScriptソースコード
-│   │   ├── index.ts       # メインエントリーポイント
-│   │   ├── instagram-notion.ts # InstagramとNotionの連携ロジック
-│   │   └── test-webhook.ts # テスト用スクリプト
-│   ├── instagram.py       # Python版のInstagram連携
-│   ├── notion.py          # Python版のNotion連携
-│   └── www/               # Webフロントエンド
+│   └── ts/                # TypeScriptソースコード
+│       ├── index.ts       # メインエントリーポイント
+│       ├── instagram-notion.ts # InstagramとNotionの連携ロジック
+│       └── instagram-notion.test.ts # Jestテストファイル
+├── .clinerules            # Clineの設定ファイル
 ├── .env                   # 環境変数
+├── .gitignore             # Git追跡対象外ファイル
+├── jest.config.js         # Jestの設定ファイル
+├── package-lock.json      # npm依存関係のロックファイル
 ├── package.json           # npm設定
 ├── tsconfig.json          # TypeScript設定
 └── README.md              # プロジェクト説明
