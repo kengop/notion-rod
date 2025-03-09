@@ -193,7 +193,6 @@ async function searchNotionPages(
     });
 
     return filteredResults;
-    return filteredResults;
   } catch (error) {
     console.error("Failed to search Notion pages:", error);
     return [];

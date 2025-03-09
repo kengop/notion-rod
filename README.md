@@ -82,10 +82,31 @@ notion-rod/
 │       ├── instagram-notion.ts # InstagramとNotionの連携ロジック
 │       └── instagram-notion.test.ts # Jestテストファイル
 ├── .clinerules            # Clineの設定ファイル
+├── .dockerignore          # Dockerビルド時に除外するファイル
 ├── .env                   # 環境変数
 ├── .gitignore             # Git追跡対象外ファイル
+├── Dockerfile             # Dockerコンテナ定義
+├── DEPLOY.md              # デプロイガイド
 ├── jest.config.js         # Jestの設定ファイル
 ├── package-lock.json      # npm依存関係のロックファイル
 ├── package.json           # npm設定
 ├── tsconfig.json          # TypeScript設定
 └── README.md              # プロジェクト説明
+```
+
+## Cloud Runへのデプロイ
+
+このアプリケーションはGoogle Cloud Runにデプロイすることができます。詳細な手順については、[DEPLOY.md](DEPLOY.md)を参照してください。
+
+### デプロイの概要
+
+1. Dockerfileを使用してコンテナイメージをビルド
+2. Google Container Registryにイメージをプッシュ
+3. Cloud Runサービスとしてデプロイ
+4. 環境変数を設定
+5. InstagramのWebhook URLを更新
+
+### 注意事項
+
+- Cloud Runでは環境変数を適切に設定する必要があります
+- InstagramのWebhook URLをCloud RunのURLに更新することを忘れないでください
